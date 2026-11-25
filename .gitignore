@@ -2,3 +2,5 @@ pomodoro/music.wav
 pomodoro/narration.wav
 pomodoro/_tts/
 __pycache__/
+siwei/_tts/
+siwei/*.wav
