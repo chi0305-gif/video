@@ -29,7 +29,7 @@ NARR = [
     ["115 年繁星推薦，大學 19 人、科大 13 人，", "台大、政大、臺科大都有學長姐！"],
     ["在四維，老師不只教課本，", "更陪你走過每一個難關。"],
     None,
-    ["免試早鳥專案報名中！追蹤臉書「四維大小事」，", "三年後，換你發光！"],
+    ["早鳥專案，12 月 1 日開跑！", "追蹤臉書「四維大小事」，三年後換你發光！"],
 ]
 SHOT7_SUB = "（此處放學生受訪原音）"
 TTS_DIR = os.path.join(OUT, "_tts")
@@ -112,13 +112,33 @@ class C:
         s.d.text((x * S, y * S), t, font=F(sz), fill=fill, anchor=anchor, stroke_width=int(stroke * S), stroke_fill=sf)
     def paste(s, img, x, y, h, alpha=1.0):
         w = img.width * h / img.height
-        im = img.resize((int(w * S), int(h * S)), Image.LANCZOS)
+        im = img.resize((max(1, int(w * S)), max(1, int(h * S))), Image.LANCZOS)
         if alpha < 1:
             a = np.asarray(im).copy(); a[..., 3] = (a[..., 3] * alpha).astype(np.uint8); im = Image.fromarray(a)
         s.im.alpha_composite(im, (int((x - w / 2) * S), int((y - h / 2) * S)))
 
 
 LOGO = Image.open(os.path.join(OUT, "assets", "logo_src.png")).convert("RGBA")
+GIRL = Image.open(os.path.join(OUT, "assets", "girl.png")).convert("RGBA")
+BOY = Image.open(os.path.join(OUT, "assets", "boy.png")).convert("RGBA")
+ADMIT_URL = "https://www.swsh.hlc.edu.tw/ischool/publish_page/652/"
+
+
+def make_qr():
+    import qrcode
+    q = qrcode.QRCode(border=2, box_size=10, error_correction=qrcode.constants.ERROR_CORRECT_M)
+    q.add_data(ADMIT_URL); q.make(fit=True)
+    return q.make_image(fill_color="black", back_color="white").convert("RGBA")
+
+QR = make_qr()
+
+
+def mascot(c, img, x, y, h, lt, t0, phase=0.0):
+    """Q 版學生：彈出＋輕微上下擺動"""
+    q = eob((lt - t0) / 0.45)
+    if q <= 0: return
+    bob = math.sin(lt * 3.2 + phase) * 7
+    c.paste(img, x, y + bob + (1 - q) * 60, h * q + 1)
 
 
 def pill(c, x, y, txt, sz, bg, fg=WHITE, a=1.0, pad=28):
@@ -172,6 +192,8 @@ def shot1(c, lt):
         rr = 230 + 60 * k + 30 * math.sin(lt * 2 + k)
         c.circle(540, 640, rr * p, outline=A([RED, GREEN, GOLD][k], 0.18), w=6)
     c.paste(LOGO, 540, 640, 330 * p + 1, alpha=clamp(lt * 3))
+    mascot(c, GIRL, 165, 670, 380, lt, 1.0, 0.0)
+    mascot(c, BOY, 915, 670, 380, lt, 1.3, 1.5)
     if lt > 0.8:
         q = ease((lt - 0.8) / 0.6)
         c.text(540, 900 + (1 - q) * 40, "花蓮縣四維高級中學", 70, A(RED, q))
@@ -218,11 +240,11 @@ def shot3(c, lt):
     for i, (ch, name, items, col, t0) in enumerate(PROG):
         if lt < t0: continue
         k = ease((lt - t0) / 0.45); y = 560 + i * 205; dx = (1 - k) * 600
-        c.rect(90 + dx, y, 990 + dx, y + 180, fill=A(WHITE, 0.95 * k), outline=A(col, k), w=5, r=34)
-        c.circle(185 + dx, y + 90, 62, fill=A(col, k))
-        c.text(185 + dx, y + 90, ch, 60, A(WHITE, k))
-        c.text(280 + dx, y + 52, name, 44, A(col, k), anchor="lm")
-        x = 280 + dx
+        c.rect(70 + dx, y, 800 + dx, y + 180, fill=A(WHITE, 0.95 * k), outline=A(col, k), w=5, r=34)
+        c.circle(150 + dx, y + 90, 58, fill=A(col, k))
+        c.text(150 + dx, y + 90, ch, 56, A(WHITE, k))
+        c.text(235 + dx, y + 52, name, 44, A(col, k), anchor="lm")
+        x = 235 + dx
         for j, it in enumerate(items):
             q = eob((lt - t0 - 0.35 - j * 0.18) / 0.3)
             if q <= 0: continue
@@ -230,15 +252,17 @@ def shot3(c, lt):
             c.rect(x, y + 102, x + w, y + 152, fill=A(col, 0.14 * q), outline=A(col, 0.7 * q), w=2, r=25)
             c.text(x + w / 2, y + 127, it, 30 * q + 1, A(INK, q))
             x += w + 14
+    mascot(c, GIRL, 925, 890, 400, lt, 0.6)
     if lt > 4.3:
         q = eob((lt - 4.3) / 0.4)
-        pill(c, 540, 1220, "動手學・考證照", 46 * q + 1, GOLD, fg=(80, 40, 0))
+        pill(c, 540, 1195, "動手學・考證照", 46 * q + 1, GOLD, fg=(80, 40, 0))
     return (540, 820)
 
 
 def shot4(c, lt):
-    placeholder(c, 110, 420, 970, 860, "實拍：普通科上課、圖書館自習", lt, clamp(lt * 3))
-    pill(c, 540, 420, "普通科", 40, GREEN, a=clamp(lt * 3))
+    placeholder(c, 90, 420, 710, 860, "實拍：普通科上課、自習", lt, clamp(lt * 3))
+    pill(c, 400, 420, "普通科", 40, GREEN, a=clamp(lt * 3))
+    mascot(c, BOY, 860, 650, 420, lt, 0.5)
     steps = [(220, "高一", "打基礎"), (540, "高二", "拚成績"), (860, "高三", "衝繁星")]
     pr = ease((lt - 0.8) / 4.2)
     c.line([(220, 1060), (860, 1060)], A(SOFT, 0.3), 10)
@@ -308,22 +332,25 @@ def shot8(c, lt):
             star(c, 540 + math.cos(ang) * d, 560 + math.sin(ang) * d, 16, [GOLD, RED, GREEN][k % 3],
                  clamp(1.5 - (lt - 4.6) / 1.5), rot=lt * 120)
     c.paste(LOGO, 540, 560, 230 * p + 1, alpha=clamp(lt * 3))
+    mascot(c, GIRL, 185, 580, 330, lt, 0.3, 0.0)
+    mascot(c, BOY, 895, 580, 330, lt, 0.5, 1.5)
     if lt > 0.5:
         q = eob((lt - 0.5) / 0.4)
-        pill(c, 540, 770, "免試早鳥專案 報名中！", 50 * q + 1, RED)
+        pill(c, 540, 775, "免試早鳥專案", 50 * q + 1, RED)
+        c.text(540, 850, "登記期間：115/12/1 – 116/3/31", 34, A(INK, q))
     if lt > 1.8:
-        q = ease((lt - 1.8) / 0.4); y = 850
-        c.rect(150, y, 930, y + 140, fill=A(WHITE, 0.97 * q), outline=A(FB, q), w=4, r=30)
-        c.circle(240, y + 70, 44, fill=A(FB, q)); c.text(242, y + 74, "f", 60, A(WHITE, q))
-        c.text(310, y + 48, "臉書：四維大小事", 40, A(INK, q), anchor="lm")
-        c.text(310, y + 103, "facebook.com/swshstory", 30, A(FB, q), anchor="lm")
+        q = ease((lt - 1.8) / 0.4); y = 890
+        c.rect(150, y, 930, y + 120, fill=A(WHITE, 0.97 * q), outline=A(FB, q), w=4, r=30)
+        c.circle(230, y + 60, 40, fill=A(FB, q)); c.text(232, y + 64, "f", 54, A(WHITE, q))
+        c.text(295, y + 40, "臉書：四維大小事", 38, A(INK, q), anchor="lm")
+        c.text(295, y + 88, "facebook.com/swshstory", 28, A(FB, q), anchor="lm")
     if lt > 2.6:
         q = ease((lt - 2.6) / 0.4)
-        c.rect(150, 1030, 930, 1240, fill=A((235, 228, 220), 0.9 * q), r=30)
-        c.rect(190, 1055, 350, 1215, fill=A(WHITE, q), outline=A(SOFT, q), w=3, r=10)
-        c.text(270, 1135, "QR", 46, A(SOFT, q))
-        c.text(380, 1105, "報名／參訪 QR Code", 36, A(INK, q), anchor="lm")
-        c.text(380, 1165, "（待學校提供正式網址）", 28, A(SOFT, q), anchor="lm")
+        c.rect(150, 1035, 930, 1245, fill=A(WHITE, 0.97 * q), outline=A(RED, q), w=4, r=30)
+        c.paste(QR, 268, 1140, 180, alpha=q)
+        c.text(385, 1090, "掃描看招生資訊", 38, A(RED, q), anchor="lm")
+        c.text(385, 1142, "預約校園參訪・早鳥登記", 30, A(INK, q), anchor="lm")
+        c.text(385, 1192, "諮詢：(03)856-1455 #114、118", 28, A(SOFT, q), anchor="lm")
     return (540, 820)
 
 
