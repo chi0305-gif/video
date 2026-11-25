@@ -1,1 +1,4 @@
 pomodoro/music.wav
+pomodoro/narration.wav
+pomodoro/_tts/
+__pycache__/

@@ -44,6 +44,10 @@ def sub_segments():
     return segs
 
 SEGS = sub_segments()
+_TJ = os.path.join(OUT, "timings.json")
+if os.path.exists(_TJ):  # 有旁白時，字幕對齊實際語音時間
+    import json
+    SEGS = [(d["start"], d["end"], d["text"]) for d in json.load(open(_TJ, encoding="utf-8"))]
 
 # ---------------- 繪圖工具 ----------------
 _fc = {}
@@ -574,6 +578,16 @@ def synth_music():
     fade = np.clip((DUR - t_all) / 2.0, 0, 1) * np.clip(t_all / 0.02, 0, 1)
     out *= fade
     out = out / (np.max(np.abs(out)) + 1e-9) * 0.85
+    nar = os.path.join(OUT, "narration.wav")
+    if os.path.exists(nar):  # 旁白出現時把配樂壓低（約 -12 dB）
+        with wave.open(nar) as w:
+            v = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(float) / 32768
+        v = np.pad(v, (0, max(0, n - len(v))))[:n]
+        envv = np.convolve(np.abs(v), np.ones(4800) / 4800, mode="same")
+        duck = np.clip(envv / 0.02, 0, 1)
+        duck = np.convolve(duck, np.ones(9600) / 9600, mode="same")
+        out = out * 0.45 * (1 - 0.72 * duck) + v / (np.max(np.abs(v)) + 1e-9) * 0.9
+        out = out / (np.max(np.abs(out)) + 1e-9) * 0.9
     st = np.stack([out, out], axis=1)
     path = os.path.join(OUT, "music.wav")
     with wave.open(path, "wb") as w:
